@@ -1,0 +1,165 @@
+package com.pp.jdbc.dao;
+
+ 
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+ 
+
+import com.pp.jdbc.bean.Bank;
+import com.pp.jdbc.bean.Transaction;
+
+ 
+
+public class BankDao {
+
+ 
+
+    public Connection getConnection() {
+        Connection con=null;
+        try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+            con = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:XE", "system", "orcl11g");
+            
+            /* First create a table in Oracle with the statement below.
+                * create table account_details(ACCOUNT_NUMBER NOT NULL NUMBER(10),AMOUNT NOT NULL FLOAT(126), NAME VARCHAR2(255), AGE NUMBER(3));     
+             * Then create a table for Transactions using below snippet.
+             * create table transaction_details(ACCOUNT_NUMBER NUMBER(10) NOT NULL ,credit float(100), debit float(100), AMOUNT FLOAT(126));
+             */
+
+ 
+
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+        }
+        return con;
+    }
+
+ 
+
+    public boolean createAccount(Bank bObj) {
+        try {
+            Connection con = getConnection();
+            PreparedStatement stmt = con.prepareStatement("insert into account_details values(?,?,?,?)");
+            stmt.setInt(1, bObj.getAccountNumber());
+            stmt.setDouble(2, bObj.getBalance());
+            stmt.setString(3, bObj.getName());
+            stmt.setInt(4, bObj.getAge());
+            stmt.executeUpdate();
+            PreparedStatement stmt2 = con.prepareStatement("insert into transaction_details values(?,?,?,?)");
+            stmt2.setInt(1,bObj.getAccountNumber());
+            stmt2.setDouble(2,bObj.getBalance());
+            stmt2.setDouble(3, 0);
+            stmt2.setDouble(4, bObj.getBalance());
+            stmt2.executeUpdate();
+            return true;
+
+ 
+
+        } catch (SQLException e) {
+            return false;
+        }
+
+ 
+
+    }
+
+ 
+
+    public double getBalance(int accountNumber) {
+        double balance=0;
+        try {
+            Connection con = getConnection();
+            PreparedStatement stmt = con.prepareStatement("select amount from account_details where account_number=?");
+            stmt.setInt(1, accountNumber);
+            ResultSet rs=stmt.executeQuery();
+            while(rs.next()) {
+                balance=rs.getDouble("amount");
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return balance;
+    }
+
+ 
+
+    public boolean depositAmount(int accountNumber, double credit) {
+            double amount=0;
+        try {
+            Connection con = getConnection();
+            PreparedStatement stmt = con.prepareStatement("update account_details set amount=? where account_number=?");
+            amount= getBalance(accountNumber)+credit;
+            stmt.setDouble(1,amount);
+            stmt.setInt(2, accountNumber);
+            stmt.executeUpdate();
+            PreparedStatement stmt2 = con.prepareStatement("insert into transaction_details values(?,?,?,?)");
+            stmt2.setInt(1,accountNumber);
+            stmt2.setDouble(2,credit);
+            stmt2.setDouble(3, 0);
+            stmt2.setDouble(4, amount);
+            stmt2.executeUpdate();
+            return true;
+
+ 
+
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+ 
+
+    public boolean withdrawAmount(int accountNumber, double debit) {
+        double amount=0;
+        try {
+            Connection con = getConnection();
+            PreparedStatement stmt = con.prepareStatement("update account_details set amount=? where account_number=?");
+            amount= getBalance(accountNumber)-debit;
+            stmt.setDouble(1, amount);
+            stmt.setInt(2, accountNumber);
+            stmt.executeUpdate();
+            PreparedStatement stmt2 = con.prepareStatement("insert into transaction_details values(?,?,?,?)");
+            stmt2.setInt(1,accountNumber);
+            stmt2.setDouble(2,0);
+            stmt2.setDouble(3, debit);
+            stmt2.setDouble(4, amount);
+            stmt2.executeUpdate();
+            return true;
+
+ 
+
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+ 
+
+    public ResultSet getAllTransactions(int accountNumber) {
+        ResultSet rs=null;
+        try {
+            Connection con = getConnection();
+            PreparedStatement stmt = con.prepareStatement("select * from transaction_details where account_number=?");
+            stmt.setInt(1, accountNumber);
+            rs=stmt.executeQuery();
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return rs;
+    }
+
+ 
+
+
+}
+ 
